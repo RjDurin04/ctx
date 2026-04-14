@@ -1,0 +1,26 @@
+# Source — only dist/ is shipped
+src/
+scripts/
+tests/
+
+# Project config
+tsconfig.json
+.ctxignore
+.ctx/
+ctx.md
+
+# Dev & CI
+.github/
+.vscode/
+.eslintrc*
+.prettierrc*
+jest.config.*
+*.test.*
+*.spec.*
+
+# Lock files (consumers use their own)
+package-lock.json
+
+# Misc
+node_modules/
+*.tgz

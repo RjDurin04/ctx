@@ -1,0 +1,16 @@
+# ctx-specific ignore patterns (respects .gitignore automatically)
+
+# Test fixtures
+tests/fixtures/**
+
+# Generated files
+**/*.generated.ts
+**/*.gen.ts
+src/graphql/generated/**
+
+# Database seeds / migrations (optional — include if you want AI to see them)
+seeds/**
+
+# Storybook
+.storybook/**
+stories/**
