@@ -74,12 +74,16 @@ ctx build
   "mcpServers": {
     "ctx-compiler": {
       "command": "ctx",
-      "args": ["serve", "C:/Projects/my-app"],
-      "system": "You have access to a ctx MCP server. At the start of every coding session, call get_overview() before doing anything else. Never guess file paths - use search() to locate symbols when unsure. Always call find_references() before modifying or renaming any exported function to understand full impact. Use expand_symbol() to read only the specific function bodies you need, not entire files. Treat call graph edges as strong navigation hints."
+      "args": ["serve", "C:/Projects/my-app"]
     }
   }
 }
 ```
+
+> **💡 Recommended AI Instructions:**
+> Copy the paragraph below and paste it into your AI's custom instructions (e.g., Cursor Rules, Claude System Prompt), or save it as an `.md` file inside your project so the AI knows how to query the server:
+> 
+> *"You have access to a ctx MCP server. At the start of every coding session, call get_overview() before doing anything else. Never guess file paths - use search() to locate symbols when unsure. Always call find_references() before modifying or renaming any exported function to understand full impact. Use expand_symbol() to read only the specific function bodies you need, not entire files. Treat call graph edges as strong navigation hints."*
 
 ---
 
@@ -111,12 +115,16 @@ npx @ctx-compiler/ctx expand src/auth/service.ts
   "mcpServers": {
     "ctx-compiler": {
       "command": "npx",
-      "args": ["-y", "@ctx-compiler/ctx", "serve", "C:/Projects/my-app"],
-      "system": "You have access to a ctx MCP server. At the start of every coding session, call get_overview() before doing anything else. Never guess file paths - use search() to locate symbols when unsure. Always call find_references() before modifying or renaming any exported function to understand full impact. Use expand_symbol() to read only the specific function bodies you need, not entire files. Treat call graph edges as strong navigation hints."
+      "args": ["-y", "@ctx-compiler/ctx", "serve", "C:/Projects/my-app"]
     }
   }
 }
 ```
+
+> **💡 Recommended AI Instructions:**
+> The official MCP standard does not allow a `system` property inside the JSON configuration. Instead, copy the paragraph below and paste it into your AI's custom instructions, or save it as an `instructions.md` file inside your project:
+> 
+> *"You have access to a ctx MCP server. At the start of every coding session, call get_overview() before doing anything else. Never guess file paths - use search() to locate symbols when unsure. Always call find_references() before modifying or renaming any exported function to understand full impact. Use expand_symbol() to read only the specific function bodies you need, not entire files. Treat call graph edges as strong navigation hints."*
 
 ---
 
