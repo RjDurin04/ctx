@@ -1,5 +1,5 @@
 import fg from "fast-glob";
-import { createReadStream, existsSync, readFileSync } from "fs";
+import { createReadStream, existsSync, readFileSync, writeFileSync } from "fs";
 import { createHash } from "crypto";
 import { createRequire } from "module";
 import { join, relative, resolve } from "path";
@@ -25,6 +25,95 @@ const LANGUAGE_PATTERNS: Record<string, "typescript" | "python"> = {
   ".py": "python",
 };
 
+/** Default patterns that ctx always ignores. */
+export const DEFAULT_IGNORES = [
+  "node_modules/**",
+  ".git/**",
+  "dist/**",
+  "build/**",
+  ".next/**",
+  ".nuxt/**",
+  ".output/**",
+  ".vercel/**",
+  "out/**",
+  "coverage/**",
+  "*.min.js",
+  "*.map",
+  ".ctx/**",
+  "__pycache__/**",
+  ".venv/**",
+  "venv/**",
+  "*.lock",
+  "package-lock.json",
+];
+
+/** Template content for auto-generated .ctxignore files. */
+const CTXIGNORE_TEMPLATE = `# ─── ctx ignore ─────────────────────────────────────────────────────────
+# Patterns listed here are excluded from ctx build, watch, and serve.
+# Uses gitignore-style syntax.  Lines starting with # are comments.
+#
+# These defaults are always applied internally:
+#   node_modules  .git  dist  build  .next  .nuxt  .output  .vercel
+#   out  coverage  *.min.js  *.map  .ctx  __pycache__  .venv  venv
+#   *.lock  package-lock.json
+#
+# Add your own project-specific patterns below:
+# ────────────────────────────────────────────────────────────────────────
+
+# Test fixtures
+tests/fixtures/**
+
+# Generated / codegen files
+**/*.generated.ts
+**/*.gen.ts
+src/graphql/generated/**
+
+# Database seeds / migrations (remove if you want AI to see them)
+seeds/**
+migrations/**
+
+# Storybook
+.storybook/**
+stories/**
+
+# Static / public assets (images, fonts, etc.)
+public/**
+static/**
+assets/**
+
+# Logs
+logs/**
+*.log
+`;
+
+/**
+ * Ensure a .ctxignore file exists in the project root.
+ * Creates one with sensible defaults if missing. Returns the path.
+ */
+export function ensureCtxIgnore(rootDir: string): string {
+  const ctxignorePath = join(rootDir, ".ctxignore");
+  if (!existsSync(ctxignorePath)) {
+    writeFileSync(ctxignorePath, CTXIGNORE_TEMPLATE, "utf-8");
+  }
+  return ctxignorePath;
+}
+
+/**
+ * Build an Ignore instance from the hardcoded defaults + .ctxignore.
+ * Shared by build, watch, and any other tool that needs filtering.
+ */
+export function loadIgnoreFilter(rootDir: string): Ignore {
+  const ig = ignore();
+  ig.add(DEFAULT_IGNORES);
+
+  const ctxignorePath = join(rootDir, ".ctxignore");
+  if (existsSync(ctxignorePath)) {
+    ig.add(readFileSync(ctxignorePath, "utf-8"));
+  }
+
+  return ig;
+}
+
 export function getLanguage(filePath: string): "typescript" | "python" | null {
   const dotIndex = filePath.lastIndexOf(".");
   if (dotIndex === -1) return null;
@@ -48,30 +137,8 @@ export async function scanDirectory(
 ): Promise<ScannedFile[]> {
   const absoluteRoot = resolve(rootDir);
 
-  const ig = ignore();
-  const defaultIgnores = [
-    "node_modules/**",
-    ".git/**",
-    "dist/**",
-    "build/**",
-    ".next/**",
-    "coverage/**",
-    "*.min.js",
-    "*.map",
-    ".ctx/**",
-  ];
-  ig.add(defaultIgnores);
+  const ig = loadIgnoreFilter(absoluteRoot);
   ig.add(extraIgnorePatterns);
-
-  const gitignorePath = join(absoluteRoot, ".gitignore");
-  if (existsSync(gitignorePath)) {
-    ig.add(readFileSync(gitignorePath, "utf-8"));
-  }
-
-  const ctxignorePath = join(absoluteRoot, ".ctxignore");
-  if (existsSync(ctxignorePath)) {
-    ig.add(readFileSync(ctxignorePath, "utf-8"));
-  }
 
   const allFiles = await fg("**/*", {
     cwd: absoluteRoot,
@@ -101,3 +168,4 @@ export async function scanDirectory(
 
   return results.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
 }
+

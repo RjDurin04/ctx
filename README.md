@@ -233,6 +233,8 @@ If you used **Option B (npx)**, replace `ctx` with `npx -y @ctx-compiler/ctx` in
 
 Parse and index a codebase, then emit the CNR file. This is the main command you'll use.
 
+> **Note:** `ctx build` takes a one-time snapshot of your project. If you add, delete, or modify files *after* running `build`, you must run it again to update the index. For automatic tracking, use `ctx watch`.
+
 ```bash
 # Index the current directory
 ctx build
@@ -298,6 +300,10 @@ ctx query --max-tokens 40000
 ### `ctx watch`
 
 Watch your project for file changes and automatically rebuild the index.
+
+Unlike `build` (which takes a one-time snapshot), `watch` runs continuously. If you add, edit, or delete files while it is running, it will instantly detect the changes, process only the affected files, and update your AI's context map in real-time. 
+
+**Tip:** Run this alongside your normal dev server (e.g., `npm run dev`) while pair-programming with AI.
 
 ```bash
 ctx watch
@@ -410,15 +416,17 @@ console.log(cnr);
 ### Automatic ignoring
 
 Ctx automatically ignores common non-source directories:
-- `node_modules/`, `.git/`, `dist/`, `build/`, `.next/`, `coverage/`
-- Minified files (`*.min.js`) and source maps (`*.map`)
+- `node_modules/`, `.git/`, `dist/`, `build/`, `.next/`, `.nuxt/`, `.output/`, `.vercel/`, `out/`, `coverage/`, `__pycache__/`, `.venv/`, `venv/`
+- Minified files (`*.min.js`), source maps (`*.map`), and lockfiles (`*.lock`, `package-lock.json`)
 - The `.ctx/` output directory itself
-
-It also respects your project's `.gitignore` file.
 
 ### Custom ignore rules (`.ctxignore`)
 
-Create a `.ctxignore` file in your project root to exclude additional paths. The syntax is the same as `.gitignore`:
+To keep your context focused and token usage low, Ctx uses `.ctxignore` as the **single source of truth** for custom exclusions. It does *not* read your project's `.gitignore` file.
+
+When you run `ctx build` or `ctx watch` for the first time, Ctx will automatically generate a `.ctxignore` template in your project root. 
+
+You can add your own paths to exclude tests, generated files, or large assets:
 
 ```gitignore
 # Ignore test fixtures

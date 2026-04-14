@@ -7,7 +7,7 @@ import chalk from "chalk";
 import ora from "ora";
 import { watch } from "chokidar";
 
-import { scanDirectory, hashFile, getLanguage } from "../scanner/scanner.js";
+import { scanDirectory, hashFile, getLanguage, ensureCtxIgnore, loadIgnoreFilter } from "../scanner/scanner.js";
 import { parseFile, initParsers } from "../parser/parser.js";
 import {
   getDb,
@@ -39,6 +39,7 @@ program
     const rootDir = resolve(dir);
     const ctxDir = join(rootDir, ".ctx");
     mkdirSync(ctxDir, { recursive: true });
+    ensureCtxIgnore(rootDir);
 
     const dbPath = join(ctxDir, "index.db");
     const cnrPath = join(ctxDir, "repo.cnr");
@@ -162,6 +163,7 @@ program
   .action(async (dir: string = ".", options) => {
     const rootDir = resolve(dir);
     const ctxDir = join(rootDir, ".ctx");
+    ensureCtxIgnore(rootDir);
 
     if (!existsSync(join(ctxDir, "index.db"))) {
       console.log(chalk.dim("No existing index — running initial build…"));
@@ -179,6 +181,9 @@ program
     const db = getDb(join(ctxDir, "index.db"));
     await initParsers();
 
+    // Use shared ignore filter (.ctxignore + hardcoded defaults)
+    const ig = loadIgnoreFilter(rootDir);
+
     // Debounce rebuild to avoid thrashing on bulk saves
     let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
     const changedFiles = new Set<string>();
@@ -188,7 +193,13 @@ program
       changedFiles.clear();
 
       for (const absolutePath of toProcess) {
-        const relativePath = relative(rootDir, absolutePath);
+        const relativePath = relative(rootDir, absolutePath).replace(/\\/g, "/");
+
+        // Skip empty paths (e.g. root dir events from chokidar)
+        if (!relativePath) continue;
+
+        // Apply ignore rules (.ctxignore + defaults)
+        if (ig.ignores(relativePath)) continue;
 
         const lang = getLanguage(relativePath);
         if (!lang) continue;
@@ -224,8 +235,13 @@ program
     const watcher = watch(rootDir, {
       ignored: (filePath: string, stats?: { isFile: () => boolean }) => {
         if (!stats) return false;
+        // Match scanDirectory default ignores
         if (filePath.includes("/.ctx/") || filePath.includes("\\.ctx\\")) return true;
-        if (filePath.includes("/node_modules/")) return true;
+        if (filePath.includes("/node_modules/") || filePath.includes("\\node_modules\\")) return true;
+        if (filePath.includes("/dist/") || filePath.includes("\\dist\\")) return true;
+        if (filePath.includes("/build/") || filePath.includes("\\build\\")) return true;
+        if (filePath.includes("/.next/") || filePath.includes("\\.next\\")) return true;
+        if (filePath.includes("/coverage/") || filePath.includes("\\coverage\\")) return true;
         if (!stats.isFile()) return false;
         const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
         return !["ts", "tsx", "js", "mjs", "py"].includes(ext);
